@@ -18,40 +18,130 @@
  * may have been made to this file. Automatak, LLC licenses these modifications
  * to you under the terms of the License.
  */
-#ifndef OPENDNP3_LINKLAYER_H
-#define OPENDNP3_LINKLAYER_H
+#ifndef OPENDNP3_LINK_LAYER_H
+#define OPENDNP3_LINK_LAYER_H
 
-#include "LinkContext.h"
+#include <openpal/logging/LogRoot.h>
+#include <openpal/executor/IExecutor.h>
+#include <openpal/executor/TimerRef.h>
+#include <openpal/container/Settable.h>
+#include <openpal/container/StaticBuffer.h>
+
+#include "opendnp3/gen/LinkStatus.h"
+#include "opendnp3/link/ILinkLayer.h"
+#include "opendnp3/link/ILinkSession.h"
+#include "opendnp3/link/LinkLayerConstants.h"
+#include "opendnp3/link/LinkConfig.h"
+#include "opendnp3/link/ILinkListener.h"
 
 namespace opendnp3
 {
 
+class ILinkTx;
+class PriStateBase;
+class SecStateBase;
+
+enum class LinkTransmitMode : uint8_t
+{
+    Idle,
+    Primary,
+    Secondary
+};
+
 //	@section desc Implements the contextual state of DNP3 Data Link Layer
-class LinkLayer final : public ILinkLayer, public ILinkSession
+class LinkLayer : public ILinkLayer, public ILinkSession
 {
 
 public:
 
 	LinkLayer(openpal::Logger logger, openpal::IExecutor&, IUpperLayer& upper, opendnp3::ILinkListener&, const LinkConfig&);
 
-	void SetRouter(ILinkTx&);
 
-	// ---- Events from below: ILinkSession / IFrameSink  ----
+	/// ---- helpers for dealing with the FCB bits ----
 
-	virtual bool OnLowerLayerUp() override;
-	virtual bool OnLowerLayerDown() override;
-	virtual bool OnTransmitResult(bool success) override;
-	virtual bool OnFrame(const LinkHeaderFields& header, const openpal::RSlice& userdata) override;
+	void ResetReadFCB()
+	{
+		nextReadFCB = true;
+	}
+	void ResetWriteFCB()
+	{
+		nextWriteFCB = true;
+	}
+	void ToggleReadFCB()
+	{
+		nextReadFCB = !nextReadFCB;
+	}
+	void ToggleWriteFCB()
+	{
+		nextWriteFCB = !nextWriteFCB;
+	}
 
 	// ---- Events from above: ILinkLayer ----
+	virtual void Send(ITransportSegment& segments);
 
-	virtual void Send(ITransportSegment& segments) override;
+	/// --- helpers for dealing with layer state transitations ---
+	bool OnLowerLayerUp();
+	bool OnLowerLayerDown();
+	bool OnTransmitResult(bool success);
+	bool SetTxSegment(ITransportSegment& segments);
 
-private:
+	/// --- helpers for formatting user data messages ---
+	openpal::RSlice FormatPrimaryBufferWithUnconfirmed(const openpal::RSlice& tpdu);
+	openpal::RSlice FormatPrimaryBufferWithConfirmed(const openpal::RSlice& tpdu, bool FCB);
 
-	// The full state
-	LinkContext ctx;
+	/// --- Helpers for queueing frames ---
+	void QueueAck();
+	void QueueLinkStatus();
+	void QueueResetLinks();
+	void QueueRequestLinkStatus();
+	void QueueTransmit(const openpal::RSlice& buffer, bool primary);
 
+	/// --- public members ----
+
+	void ResetRetry();
+	bool Retry();
+	void PushDataUp(const openpal::RSlice& data);
+	void CompleteSendOperation(bool success);
+	void TryStartTransmission();
+	void OnKeepAliveTimeout();
+	void OnResponseTimeout();
+	void StartResponseTimer();
+	void StartKeepAliveTimer(const openpal::MonotonicTimestamp& expiration);
+	void CancelTimer();
+	void FailKeepAlive(bool timeout);
+	void CompleteKeepAlive();
+	bool OnFrame(const LinkHeaderFields& header, const openpal::RSlice& userdata);
+	bool Validate(bool isMaster, uint16_t src, uint16_t dest);
+	bool TryPendingTx(openpal::Settable<openpal::RSlice>& pending, bool primary);
+
+	void SetRouter(ILinkTx& router);
+
+	// buffers used for primary and secondary requests
+	openpal::StaticBuffer<LPDU_MAX_FRAME_SIZE> priTxBuffer;
+	openpal::StaticBuffer<LPDU_HEADER_SIZE> secTxBuffer;
+
+	openpal::Settable<openpal::RSlice> pendingPriTx;
+	openpal::Settable<openpal::RSlice> pendingSecTx;
+
+	openpal::Logger logger;
+	const LinkConfig config;
+	ITransportSegment* pSegments;
+	LinkTransmitMode txMode;
+	uint32_t numRetryRemaining;
+	openpal::IExecutor* pExecutor;
+	openpal::TimerRef rspTimeoutTimer;
+	openpal::TimerRef keepAliveTimer;
+	bool nextReadFCB;
+	bool nextWriteFCB;
+	bool isOnline;
+	bool isRemoteReset;
+	bool keepAliveTimeout;
+	openpal::MonotonicTimestamp lastMessageTimestamp;
+	ILinkTx* pRouter;
+	PriStateBase* pPriState;
+	SecStateBase* pSecState;
+	ILinkListener* pListener;
+	IUpperLayer* pUpperLayer;
 };
 
 }

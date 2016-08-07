@@ -23,7 +23,7 @@
 
 #include "opendnp3/LogLevels.h"
 #include "opendnp3/link/Singleton.h"
-#include "opendnp3/link/LinkContext.h"
+#include "opendnp3/link/LinkLayer.h"
 
 #include <openpal/logging/LogMacros.h>
 
@@ -36,13 +36,13 @@ public:
 
 	// Incoming messages to secondary station
 
-	virtual SecStateBase& OnResetLinkStates(LinkContext&) = 0;
-	virtual SecStateBase& OnRequestLinkStatus(LinkContext&) = 0;
+	virtual SecStateBase& OnResetLinkStates(LinkLayer&) = 0;
+	virtual SecStateBase& OnRequestLinkStatus(LinkLayer&) = 0;
 
-	virtual SecStateBase& OnTestLinkStatus(LinkContext&, bool fcb) = 0;
-	virtual SecStateBase& OnConfirmedUserData(LinkContext&, bool fcb, const openpal::RSlice&) = 0;
+	virtual SecStateBase& OnTestLinkStatus(LinkLayer&, bool fcb) = 0;
+	virtual SecStateBase& OnConfirmedUserData(LinkLayer&, bool fcb, const openpal::RSlice&) = 0;
 
-	virtual SecStateBase& OnTransmitResult(LinkContext& ctx, bool success);
+	virtual SecStateBase& OnTransmitResult(LinkLayer& ctx, bool success);
 
 	//every concrete state implements this for logging purposes
 
@@ -62,44 +62,44 @@ protected:
 
 public:
 
-	virtual SecStateBase& OnTransmitResult(LinkContext& ctx, bool success) override final;
-	virtual SecStateBase& OnResetLinkStates(LinkContext&) override final;
-	virtual SecStateBase& OnRequestLinkStatus(LinkContext&) override final;
-	virtual SecStateBase& OnTestLinkStatus(LinkContext&, bool fcb) override final;
-	virtual SecStateBase& OnConfirmedUserData(LinkContext&, bool fcb, const openpal::RSlice&) override final;
+	virtual SecStateBase& OnTransmitResult(LinkLayer& ctx, bool success) override final;
+	virtual SecStateBase& OnResetLinkStates(LinkLayer&) override final;
+	virtual SecStateBase& OnRequestLinkStatus(LinkLayer&) override final;
+	virtual SecStateBase& OnTestLinkStatus(LinkLayer&, bool fcb) override final;
+	virtual SecStateBase& OnConfirmedUserData(LinkLayer&, bool fcb, const openpal::RSlice&) override final;
 };
 
 
 template <class NextState>
-SecStateBase& SLLS_TransmitWaitBase<NextState>::OnTransmitResult(LinkContext& ctx, bool success)
+SecStateBase& SLLS_TransmitWaitBase<NextState>::OnTransmitResult(LinkLayer& ctx, bool success)
 {
 	// with secondary replies, we dont' really care about success
 	return NextState::Instance();
 }
 
 template <class NextState>
-SecStateBase& SLLS_TransmitWaitBase<NextState>::OnResetLinkStates(LinkContext& ctx)
+SecStateBase& SLLS_TransmitWaitBase<NextState>::OnResetLinkStates(LinkLayer& ctx)
 {
 	SIMPLE_LOG_BLOCK(ctx.logger, flags::WARN, "Ignoring link frame, remote is flooding");
 	return *this;
 }
 
 template <class NextState>
-SecStateBase& SLLS_TransmitWaitBase<NextState>::OnRequestLinkStatus(LinkContext& ctx)
+SecStateBase& SLLS_TransmitWaitBase<NextState>::OnRequestLinkStatus(LinkLayer& ctx)
 {
 	SIMPLE_LOG_BLOCK(ctx.logger, flags::WARN, "Ignoring link frame, remote is flooding");
 	return *this;
 }
 
 template <class NextState>
-SecStateBase& SLLS_TransmitWaitBase<NextState>::OnTestLinkStatus(LinkContext& ctx, bool fcb)
+SecStateBase& SLLS_TransmitWaitBase<NextState>::OnTestLinkStatus(LinkLayer& ctx, bool fcb)
 {
 	SIMPLE_LOG_BLOCK(ctx.logger, flags::WARN, "Ignoring link frame, remote is flooding");
 	return *this;
 }
 
 template <class NextState>
-SecStateBase& SLLS_TransmitWaitBase<NextState>::OnConfirmedUserData(LinkContext& ctx, bool fcb, const openpal::RSlice&)
+SecStateBase& SLLS_TransmitWaitBase<NextState>::OnConfirmedUserData(LinkLayer& ctx, bool fcb, const openpal::RSlice&)
 {
 	SIMPLE_LOG_BLOCK(ctx.logger, flags::WARN, "Ignoring link frame, remote is flooding");
 	return *this;
@@ -114,10 +114,10 @@ public:
 
 	MACRO_STATE_SINGLETON_INSTANCE(SLLS_NotReset);
 
-	virtual SecStateBase& OnConfirmedUserData(LinkContext&, bool fcb, const openpal::RSlice&) override;
-	virtual SecStateBase& OnResetLinkStates(LinkContext&) override;
-	virtual SecStateBase& OnRequestLinkStatus(LinkContext&) override;
-	virtual SecStateBase& OnTestLinkStatus(LinkContext&, bool fcb) override;
+	virtual SecStateBase& OnConfirmedUserData(LinkLayer&, bool fcb, const openpal::RSlice&) override;
+	virtual SecStateBase& OnResetLinkStates(LinkLayer&) override;
+	virtual SecStateBase& OnRequestLinkStatus(LinkLayer&) override;
+	virtual SecStateBase& OnTestLinkStatus(LinkLayer&, bool fcb) override;
 
 };
 
@@ -128,10 +128,10 @@ class SLLS_Reset final : public SecStateBase
 {
 	MACRO_STATE_SINGLETON_INSTANCE(SLLS_Reset);
 
-	virtual SecStateBase& OnConfirmedUserData(LinkContext&, bool fcb, const openpal::RSlice&) override;
-	virtual SecStateBase& OnResetLinkStates(LinkContext&) override;
-	virtual SecStateBase& OnRequestLinkStatus(LinkContext&) override;
-	virtual SecStateBase& OnTestLinkStatus(LinkContext&, bool fcb) override;
+	virtual SecStateBase& OnConfirmedUserData(LinkLayer&, bool fcb, const openpal::RSlice&) override;
+	virtual SecStateBase& OnResetLinkStates(LinkLayer&) override;
+	virtual SecStateBase& OnRequestLinkStatus(LinkLayer&) override;
+	virtual SecStateBase& OnTestLinkStatus(LinkLayer&, bool fcb) override;
 };
 
 

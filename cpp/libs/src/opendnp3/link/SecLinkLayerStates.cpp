@@ -37,7 +37,7 @@ namespace opendnp3
 // SecStateBase
 ////////////////////////////////////////
 
-SecStateBase& SecStateBase::OnTransmitResult(LinkContext& ctx, bool success)
+SecStateBase& SecStateBase::OnTransmitResult(LinkLayer& ctx, bool success)
 {
 	FORMAT_LOG_BLOCK(ctx.logger, flags::ERR, "Invalid event for state: %s", this->Name());
 	return *this;
@@ -48,26 +48,26 @@ SecStateBase& SecStateBase::OnTransmitResult(LinkContext& ctx, bool success)
 ////////////////////////////////////////////////////////
 SLLS_NotReset SLLS_NotReset::instance;
 
-SecStateBase& SLLS_NotReset::OnTestLinkStatus(LinkContext& ctx, bool aFcb)
+SecStateBase& SLLS_NotReset::OnTestLinkStatus(LinkLayer& ctx, bool aFcb)
 {
 	SIMPLE_LOG_BLOCK_WITH_CODE(ctx.logger, flags::WARN, DLERR_UNEXPECTED_LPDU, "TestLinkStatus ignored");
 	return *this;
 }
 
-SecStateBase& SLLS_NotReset::OnConfirmedUserData(LinkContext& ctx, bool aFcb, const openpal::RSlice&)
+SecStateBase& SLLS_NotReset::OnConfirmedUserData(LinkLayer& ctx, bool aFcb, const openpal::RSlice&)
 {
 	SIMPLE_LOG_BLOCK_WITH_CODE(ctx.logger, flags::WARN, DLERR_UNEXPECTED_LPDU, "ConfirmedUserData ignored");
 	return *this;
 }
 
-SecStateBase& SLLS_NotReset::OnResetLinkStates(LinkContext& ctx)
+SecStateBase& SLLS_NotReset::OnResetLinkStates(LinkLayer& ctx)
 {
 	ctx.QueueAck();
 	ctx.ResetReadFCB();
 	return SLLS_TransmitWaitReset::Instance();
 }
 
-SecStateBase& SLLS_NotReset::OnRequestLinkStatus(LinkContext& ctx)
+SecStateBase& SLLS_NotReset::OnRequestLinkStatus(LinkLayer& ctx)
 {
 	ctx.QueueLinkStatus();
 	return SLLS_TransmitWaitNotReset::Instance();
@@ -78,7 +78,7 @@ SecStateBase& SLLS_NotReset::OnRequestLinkStatus(LinkContext& ctx)
 ////////////////////////////////////////////////////////
 SLLS_Reset SLLS_Reset::instance;
 
-SecStateBase& SLLS_Reset::OnTestLinkStatus(LinkContext& ctx, bool fcb)
+SecStateBase& SLLS_Reset::OnTestLinkStatus(LinkLayer& ctx, bool fcb)
 {
 	if(ctx.nextReadFCB == fcb)
 	{
@@ -96,7 +96,7 @@ SecStateBase& SLLS_Reset::OnTestLinkStatus(LinkContext& ctx, bool fcb)
 	}
 }
 
-SecStateBase& SLLS_Reset::OnConfirmedUserData(LinkContext& ctx, bool fcb, const openpal::RSlice& data)
+SecStateBase& SLLS_Reset::OnConfirmedUserData(LinkLayer& ctx, bool fcb, const openpal::RSlice& data)
 {
 	ctx.QueueAck();
 
@@ -113,14 +113,14 @@ SecStateBase& SLLS_Reset::OnConfirmedUserData(LinkContext& ctx, bool fcb, const 
 	return SLLS_TransmitWaitReset::Instance();
 }
 
-SecStateBase& SLLS_Reset::OnResetLinkStates(LinkContext& ctx)
+SecStateBase& SLLS_Reset::OnResetLinkStates(LinkLayer& ctx)
 {
 	ctx.QueueAck();
 	ctx.ResetReadFCB();
 	return SLLS_TransmitWaitReset::Instance();
 }
 
-SecStateBase& SLLS_Reset::OnRequestLinkStatus(LinkContext& ctx)
+SecStateBase& SLLS_Reset::OnRequestLinkStatus(LinkLayer& ctx)
 {
 	ctx.QueueLinkStatus();
 	return SLLS_TransmitWaitReset::Instance();

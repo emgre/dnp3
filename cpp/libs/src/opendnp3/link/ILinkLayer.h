@@ -39,7 +39,6 @@ public:
 
 	/// Transmit a buffer that can be iterated over in no greater than 250 byte segments
 	virtual void Send(ITransportSegment& segment) = 0;
-
 };
 
 }
